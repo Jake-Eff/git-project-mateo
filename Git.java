@@ -18,7 +18,7 @@ public class Git {
     private File index;
     private File head;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
 
         Git repo = new Git();
 
@@ -30,6 +30,8 @@ public class Git {
             repo.addFileEntry("Hello.txt");
             repo.createBlob("file1.txt");
             repo.addFileEntry("file1.txt");
+            repo.addFileEntry("Hello.txt");
+            repo.addFileEntry("Hello.txt");
 
         } catch (IOException e) {
             System.out.println("SHA-1 is not available " + e);
@@ -56,7 +58,28 @@ public class Git {
         }
         System.out.println(first);
         System.out.println(first.equals(second));
+        System.out.println("-- Step 4 test --");
+        String[] list = { "0a4d55a8d778e5022fab701977c5d840bbc486d0 myProgram/docs/Hello.txt",
+                "483b5e082cf5502b303ba3dd4f3469a49fd3421f myProgram/docs/World.txt",
+                "4377a91cdfd44db9a9bbf056849c7da0fc6cc7be myProgram/README.md" };
+        try {
+            String rootHash = repo.createFinalTree(list);
+            System.out.println("Root hash: " + rootHash);
+            System.out.println("Hash is 40 chars: " + (rootHash.length() == 40));
 
+            File rootFile = new File(repo.getObjects(), rootHash);
+            System.out.println("Root tree file exists: " + rootFile.exists());
+
+            BufferedReader reader = new BufferedReader(new FileReader(rootFile));
+            String line = reader.readLine();
+            while (line != null) {
+                System.out.println(" " + line);
+                line = reader.readLine();
+            }
+            reader.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public Git() {
@@ -173,14 +196,16 @@ public class Git {
         File newFile = new File(objects, fileHash);
         newFile.createNewFile();
 
-        BufferedReader fileReader = new BufferedReader(new FileReader(takenFile));
-        FileWriter writeFile = new FileWriter(newFile.toPath().toString());
-        String fileContents = "";
-        while ((fileContents = fileReader.readLine()) != null) {
-            writeFile.write(fileContents + "\n");
-        }
-        fileReader.close();
-        writeFile.close();
+        Files.write(Path.of(newFile.getPath()), Files.readAllBytes(Path.of(takenFile)));
+
+        // BufferedReader fileReader = new BufferedReader(new FileReader(takenFile));
+        // FileWriter writeFile = new FileWriter(newFile.toPath().toString());
+        // String fileContents = "";
+        // while ((fileContents = fileReader.readLine()) != null) {
+        // writeFile.write(fileContents + "\n");
+        // }
+        // fileReader.close();
+        // writeFile.close();
 
     }
 

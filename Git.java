@@ -394,4 +394,19 @@ public class Git {
         return createTree(workingList, "");
     }
 
+    public String commit(String author, String message) throws IOException{
+        List<String> entries = Files.readAllLines(Path.of(index.getPath()));
+        String treeHash = createFinalTree(entries.toArray(new String [0]));
+        Path headPath = Path.of(head.getPath());
+        String parentHash = new String(Files.readAllBytes(headPath)).trim();
+
+        String content = "tree: " + treeHash + "\n";
+        if(!parentHash.isEmpty()){
+            content += "parent: " + parentHash + "\n";
+        }
+        content += "author: " + author + "\n";
+        content += "date: " + java.time.Instant.now() + "\n";
+        content += "message: " + message + "\n";
+    }
+
 }

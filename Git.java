@@ -22,48 +22,75 @@ public class Git {
 
         Git repo = new Git();
 
+        String[] workingList;
         try {
-            System.out.println(hashFile("Hello.txt"));
+            String firstFile = "Hello.txt";
+            if (args.length > 0) {
+                firstFile = args[0];
+            }
+            String fileHash = hashFile(firstFile);
+            System.out.println(fileHash);
 
             System.out.println("-- Blob creation --");
-            repo.createBlob("Hello.txt");
-            repo.addFileEntry("Hello.txt");
-            repo.createBlob("file1.txt");
-            repo.addFileEntry("file1.txt");
-            repo.addFileEntry("Hello.txt");
-            repo.addFileEntry("Hello.txt");
+            if (args.length == 0) {
+                repo.createBlob("Hello.txt");
+                repo.addFileEntry("Hello.txt");
+                repo.createBlob("file1.txt");
+                repo.addFileEntry("file1.txt");
+                repo.addFileEntry("Hello.txt");
+                repo.addFileEntry("Hello.txt");
+            } else {
+                for (String filePath : args) {
+                    repo.createBlob(filePath);
+                    repo.addFileEntry(filePath);
+                }
+            }
+
+            File blob = new File(repo.getObjects(), fileHash);
+            boolean match = blob.isFile() && hashFile(blob.getPath()).equals(fileHash);
+            System.out.println("Blob matches OG: " + match);
+
+            Path indexPath = Path.of(repo.getIndex().getPath());
+            List<String> entries = Files.readAllLines(indexPath);
+            int matches = 0;
+            for (String entry : entries) {
+                int firstSpace = entry.indexOf(' ');
+                if (entry.substring(firstSpace + 1).equals(firstFile)) {
+                    matches++;
+                }
+            }
+            System.out
+                    .println("correct index entry: " + (matches == 1 && entries.contains(fileHash + " " + firstFile)));
+            workingList = redoList(entries.toArray(new String[0]));
 
         } catch (IOException e) {
             System.out.println("SHA-1 is not available " + e);
+            return;
         }
-        String[] workingList = {
-                "blob 0a4d55a8d778e5022fab701977c5d840bbc486d0 myProgram/docs/Hello.txt",
-                "blob 483b5e082cf5502b303ba3dd4f3469a49fd3421f myProgram/docs/World.txt",
-        };
 
         System.out.println("-- Tree creation --");
         String first = "";
         try {
-            first = repo.createTree(workingList, "myProgram/docs");
+            first = repo.createTree(workingList, "");
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
         String second = "";
         try {
-            second = repo.createTree(workingList, "myProgram/docs");
+            second = repo.createTree(workingList, "");
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+
         System.out.println(first);
-        System.out.println(first.equals(second));
+        System.out.println("Same tree hash twice: " + (!first.isEmpty() && first.equals(second)));
+
         System.out.println("-- Step 4 test --");
-        String[] list = { "0a4d55a8d778e5022fab701977c5d840bbc486d0 myProgram/docs/Hello.txt",
-                "483b5e082cf5502b303ba3dd4f3469a49fd3421f myProgram/docs/World.txt",
-                "4377a91cdfd44db9a9bbf056849c7da0fc6cc7be myProgram/README.md" };
+
         try {
-            String rootHash = repo.createFinalTree(list);
+            String rootHash = repo.createFinalTree(workingList);
             System.out.println("Root hash: " + rootHash);
             System.out.println("Hash is 40 chars: " + (rootHash.length() == 40));
 
@@ -253,7 +280,7 @@ public class Git {
 
     public String createTree(String[] workingList, String dirPath) throws IOException {
         String start = dirPath;
-        if(!dirPath.isEmpty()){
+        if (!dirPath.isEmpty()) {
             start += "/";
         }
         String content = "";
@@ -265,7 +292,7 @@ public class Git {
             if (path.startsWith(start)) {
                 String hash = workingList[i].substring(0, 46);
                 String name = path.substring(start.length());
-                if(!name.contains("/")){
+                if (!name.contains("/")) {
                     content += hash + name + "\n";
                 }
             }
@@ -361,10 +388,10 @@ public class Git {
 
     public String createFinalTree(String[] workingList) throws IOException {
         workingList = redoList(workingList);
-        while (workingList.length > 1) {
+        while (workingList.length > 0 && countSlashes(workingList[0].substring(46)) > 0) {
             workingList = getLeafRoot(workingList);
         }
-        return workingList[0].substring(5, 45);
+        return createTree(workingList, "");
     }
 
 }

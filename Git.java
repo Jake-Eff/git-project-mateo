@@ -394,7 +394,7 @@ public class Git {
         return createTree(workingList, "");
     }
 
-    public String commit(String author, String message) throws IOException{
+    public String commit(String author, String message) throws IOException, NoSuchAlgorithmException{
         List<String> entries = Files.readAllLines(Path.of(index.getPath()));
         String treeHash = createFinalTree(entries.toArray(new String [0]));
         Path headPath = Path.of(head.getPath());
@@ -407,6 +407,16 @@ public class Git {
         content += "author: " + author + "\n";
         content += "date: " + java.time.Instant.now() + "\n";
         content += "message: " + message + "\n";
+
+        byte[] commitBytes = content.getBytes();
+        MessageDigest digest = MessageDigest.getInstance("SHA-1");
+        byte[] hash = digest.digest(commitBytes);
+        String commitHash = HexFormat.of().formatHex(hash);
+
+        File commitFile = new File(objects, commitHash);
+        Files.write(Path.of(commitFile.getPath()), commitBytes);
+        Files.write(headPath, commitHash.getBytes());
+        return commitHash;
     }
 
 }

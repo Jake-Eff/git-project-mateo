@@ -18,7 +18,7 @@ public class Git {
     private File index;
     private File head;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, NoSuchAlgorithmException {
 
         Git repo = new Git();
 
@@ -107,6 +107,15 @@ public class Git {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        System.out.println("Test commit");
+        String firstCommit = repo.commit("jake", "first test");
+        String secondCommit = repo.commit("jake", "second test");
+        Path commitFile = Path.of("git", "objects", secondCommit);
+        String head = new String(Files.readAllBytes(Path.of("git", "HEAD")));
+        System.out.println("is parent correct: " + Files.readAllLines(commitFile).contains("parent: " + firstCommit));
+        System.out.println("is head correct: " + head.equals(secondCommit));
+
     }
 
     public Git() {

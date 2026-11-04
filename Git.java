@@ -217,20 +217,34 @@ public class Git {
 
         String firstLine = fileReader.readLine();
         String line = firstLine;
+        String newEntry = fileHash + " " + takenFile;
+        StringBuilder contents = new StringBuilder();
+        boolean found = false;
+
         while (line != null) {
-            if (line.endsWith(takenFile)) {
-                fileReader.close();
+            int firstSpace = line.indexOf(' ');
+            String path = line.substring(firstSpace + 1);
+            if (path.equals(takenFile)) {
+                line = newEntry;
+                found = true;
             }
+            contents.append(line);
             line = fileReader.readLine();
+            if (line != null) {
+                contents.append("\n");
+            }
         }
         fileReader.close();
 
-        FileWriter writeFile = new FileWriter(index, true);
+        FileWriter writeFile = new FileWriter(index);
+        writeFile.write(contents.toString());
 
-        if (firstLine == null) {
-            writeFile.write(fileHash + " " + takenFile);
-        } else {
-            writeFile.write("\n" + fileHash + " " + takenFile);
+        if (!found) {
+            if (firstLine == null) {
+                writeFile.write(newEntry);
+            } else {
+                writeFile.write("\n" + newEntry);
+            }
         }
 
         writeFile.close();
@@ -238,7 +252,10 @@ public class Git {
     }
 
     public String createTree(String[] workingList, String dirPath) throws IOException {
-        String start = dirPath + "/";
+        String start = dirPath;
+        if(!dirPath.isEmpty()){
+            start += "/";
+        }
         String content = "";
         for (int i = 0; i < workingList.length; i++) {
             if (workingList[i] == null) {
@@ -248,7 +265,9 @@ public class Git {
             if (path.startsWith(start)) {
                 String hash = workingList[i].substring(0, 46);
                 String name = path.substring(start.length());
-                content += hash + name + "\n";
+                if(!name.contains("/")){
+                    content += hash + name + "\n";
+                }
             }
         }
         File tempFile = new File("cur");
